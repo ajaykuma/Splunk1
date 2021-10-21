@@ -1,0 +1,63 @@
+Working with Splunk Apps
+------------------
+--Apps extend splunk's functionality
+--Apps are bunch of configuration files/text files
+
+Look for apps in https://splunkbase.splunk.com/
+
+Looking at existing Apps:
+--------------
+Login into splunk web interface
+http://localhost:8000
+Apps > (Shows apps installed & activated)
+Note** we may see "Search and Reporting" for now.
+
+Apps>Settings icon >Browse for more apps > dashboard examples > Shows : Splunk Dashboard Examples
+--To install login into your splunk account > once installed 'Splunk Dashboard Examples was successfully installed.'> open App
+
+App should be installed.
+
+Click on Top Left corner 'splunk>enterprise' and looks under Apps which shows the currenltly installed apps.
+We will use dashboard examples to create dashboards.
+
+You can also look at apps by clicking on Top Left corner 'splunk>enterprise' and 
+Apps > Manage Apps > 
+Note** Shows apps installed (enabled/disabled status)
+
+Optionally getting an App from splunk base..
+Adding a new App and looking fot it:
+visit : https://splunkbase.splunk.com/
+>search for "splunk dashboard examples" > https://splunkbase.splunk.com/app/1603/
+>download the .tgz file on your system
+
+Now..
+To install apps and add-ons from within Splunk Enterprise
+>Log into Splunk Enterprise.
+>On the Apps menu, 
+>Click Install app from file.
+>In the Upload app window, click Choose File.
+>Locate the .tar.gz file you just downloaded, and then click Open or Choose.
+>Click Upload. (remember to check " Upgrade app. Checking this will overwrite the app if it already exists.)
+>Click Restart Splunk, and then confirm that you want to restart. (in new version ie 8.x not required)
+
+To install apps and add-ons directly into Splunk Enterprise
+Put the downloaded file in the $SPLUNK_HOME/etc/apps directory(in case of linux) or in your Splunk directory path in windows.
+Untar and ungzip your app or add-on, using a tool like tar -xvf (on *nix) or WinZip (on Windows).
+Restart Splunk.  (in new version ie 8.x not required)
+After you install a Splunk app, you will find it on Splunk Home. 
+
+Now
+Apps > (Shows apps installed & activated)
+Note** we should see "Search and Reporting" & "Splunk Dashboard Examples"
+
+Apps > Manage Apps > 
+Note** Shows apps installed (enabled/disabled status)
+
+Now we can use this app.
+This app takes splunk's internal log information , gives us ideas of dashboards we can make.
+
+Looking for files that make up this app: (in case of windows)
+C:\Program Files\Splunk\etc\apps\simple_xml_examples\default
+
+
+

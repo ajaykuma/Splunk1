@@ -1,0 +1,28 @@
+#Querying n Reporting
+--Upload data (say namenode log)
+--Remember to add field :TypeOfMsg as shown in previous exercices
+--Search and Reporting > run a query
+  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoop."
+  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoo*"
+--Format Timeline (zoom in /zoom out) options can be used to filter data based on time range
+Option1:
+--save the results of query as a report 'QueryRepF1' 
+
+Option2:
+--Visualization Tab
+--Quick Reports
+  >choose top values by time
+  >shows the visualization and also the query is updated in 'Search Bar'
+  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoo*"| timechart count by host limit=10
+  >statistics tab gets updated with stats in Tabular format
+--save the resulting visualization as a report 'QueryRep1'
+
+--These can later be added to dashboards.
+
+--Search and Reporting > Reports > Click on QueryRep1 (which was created earlier) > edit 
+--choose Pie As visualization and can edit time range or any other aspect..
+--save it as a new report --QueryRep1-Pie_Representation
+--Optionally this can be added to dashboard too.
+
+--Create a dashboard and add these reports.
+--change them to 'dark theme' and refresh dashboard.

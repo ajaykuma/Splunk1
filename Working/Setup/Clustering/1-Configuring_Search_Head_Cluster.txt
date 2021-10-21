@@ -1,0 +1,189 @@
+Deployer:
+splunk_home/etc/system/local
+
+--edit server.conf
+--add a new stanza
+
+[shclustering]
+pass4SymmKey = test1234
+shcluster_label = cluster_1
+
+--save
+
+<restart splunk>
+
+ip1 - Deployer
+ip2 - sh1
+ip3 - sh2
+ip4 - sh3
+
+#to run on SH only
+./splunk init shcluster-config -auth <username>:<password> -mgmt_uri <URI>:
+<management_port> -replication_port <replication_port> -replication_factor <n>
+-conf_deploy_fetch_url <URL>:<management_port> -secret <security_key>
+-shcluster_label <label>
+
+#since we already setup a splunk instance at /usr/local/splunk which is running as indexer
+#running another instance in same node
+on n1
+/usr/local/shsplunk/splunk/bin$ ./splunk init shcluster-config -auth admin:xxxx@xxxx -mgmt_uri https://192.168.251.40:9089
+ -replication_port 9000 -replication_factor 2 -conf_deploy_fetch_url http://192.168.251.40:8089 -secret Abcd@1234 -shcluster_label cluster_1
+Search head clustering has been initialized on this node.
+
+#In Above command, first mgmt uri is of deployer and second one is for ur master node (in case of existing indexer cluster)
+#the above command needs to be repeated on each search head node with their respective mgmt uri as given after -auth admin
+(i.e. on n2,n3)
+
+You need to restart the Splunk Server (splunkd) for your changes to take effect.
+/usr/local/shsplunk/splunk/bin$ ./splunk restart
+
+/usr/local/shsplunk/splunk/bin$ ./splunk help shcluster
+
+#on n1
+#now bootstrap and create captain server
+/usr/local/shsplunk/splunk/bin$ ./splunk list shcluster-member-info
+Member is unable to handle request at this time.  This means either member unable to communicate w/ captain OR captain does not have <repFactor> members added to the search head cluster. 
+
+/usr/local/shsplunk/splunk/bin$ ./splunk bootstrap shcluster-captain -servers_list "https://192.168.251.38:9089,https://192.168.251.39:9089" -auth admin:Ajay@1979
+Successfully bootstrapped this node as the captain with the given servers.
+
+/usr/local/shsplunk/splunk/bin$ ./splunk list shcluster-member-info
+
+/usr/local/shsplunk/splunk/bin$ ./splunk list shcluster-member-info
+	member
+		active_historical_search_count:0
+		active_realtime_search_count:0
+		adhoc_searchhead:0
+		is_registered:1
+		last_heartbeat_attempt:1598978155
+		maintenance_mode:0
+		no_artifact_replications:0
+		peer_load_stats_gla_15m:0
+		peer_load_stats_gla_1m:0
+		peer_load_stats_gla_5m:0
+		peer_load_stats_max_runtime:0
+		peer_load_stats_num_autosummary:0
+		peer_load_stats_num_historical:0
+		peer_load_stats_num_realtime:0
+		peer_load_stats_num_running:0
+		peer_load_stats_total_runtime:0
+		restart_state:NoRestart
+		status:Up
+
+hdus@n1:/usr/local/shsplunk/splunk/bin$ ./splunk list shcluster-members
+	461E4BE9-CC7F-47F0-8A4B-42E121223071
+		adhoc_searchhead:0
+		advertise_restart_required:1
+		advertise_restart_required_reason:
+ 			User 'splunk-system-user' triggered the 'disable' action on app 'splunk_monitoring_console', and the following objects required a restart: dmc_alerts, splunk_monitoring_console_assets
+ 		artifact_count:0
+		delayed_artifacts_to_discard:
+ 		fixup_set:
+ 		host_port_pair:192.168.251.39:9089
+		is_captain:0
+		kv_store_host_port:192.168.251.39:9091
+		label:n3
+		last_heartbeat:1598978186
+		mgmt_uri:https://192.168.251.39:9089
+		no_artifact_replications:0
+		peer_scheme_host_port:https://192.168.251.39:9089
+		pending_job_count:0
+		preferred_captain:1
+		replication_count:0
+		replication_port:9001
+		replication_use_ssl:0
+		site:default
+		status:Up
+
+	48D12100-6639-4DB9-BF0B-A8AF2B3B982A
+		adhoc_searchhead:0
+		advertise_restart_required:0
+		artifact_count:0
+		delayed_artifacts_to_discard:
+ 		fixup_set:
+ 		host_port_pair:192.168.251.40:9089
+		is_captain:1
+		kv_store_host_port:192.168.251.40:9191
+		label:n1
+		last_heartbeat:1598978185
+		mgmt_uri:https://192.168.251.40:9089
+		no_artifact_replications:0
+		peer_scheme_host_port:https://192.168.251.40:9089
+		pending_job_count:0
+		preferred_captain:1
+		replication_count:0
+		replication_port:9000
+		replication_use_ssl:0
+		site:default
+		status:Up
+
+	B06A9458-C9FE-464A-B6DA-5BF428E39118
+		adhoc_searchhead:0
+		advertise_restart_required:1
+		advertise_restart_required_reason:
+ 			User 'splunk-system-user' triggered the 'disable' action on app 'splunk_monitoring_console', and the following objects required a restart: dmc_alerts, splunk_monitoring_console_assets
+ 		artifact_count:0
+		delayed_artifacts_to_discard:
+ 		fixup_set:
+ 		host_port_pair:192.168.251.38:9089
+		is_captain:0
+		kv_store_host_port:192.168.251.38:9191
+		label:n2
+		last_heartbeat:1598978185
+		mgmt_uri:https://192.168.251.38:9089
+		no_artifact_replications:0
+		peer_scheme_host_port:https://192.168.251.38:9089
+		pending_job_count:0
+		preferred_captain:1
+		replication_count:0
+		replication_port:9001
+		replication_use_ssl:0
+		site:default
+		status:Up
+
+hdus@n1:/usr/local/shsplunk/splunk/bin$ 
+hdus@n1:/usr/local/shsplunk/splunk/bin$ ./splunk show shcluster-status -auth
+
+ Captain:
+		               dynamic_captain : 1
+		               elected_captain : Tue Sep  1 18:35:50 2020
+		                            id : 7AA452BF-6C0E-4913-A7A1-6322DE3D1B84
+		              initialized_flag : 1
+		                         label : n1
+		                      mgmt_uri : https://192.168.251.40:9089
+		         min_peers_joined_flag : 1
+		          rolling_restart_flag : 0
+		            service_ready_flag : 1
+
+ Members: 
+	n3
+		                         label : n3
+		         last_conf_replication : Tue Sep  1 18:37:11 2020
+		                      mgmt_uri : https://192.168.251.39:9089
+		                mgmt_uri_alias : https://192.168.251.39:9089
+		                        status : Up
+	n1
+		                         label : n1
+		                      mgmt_uri : https://192.168.251.40:9089
+		                mgmt_uri_alias : https://192.168.251.40:9089
+		                        status : Up
+	n2
+		                         label : n2
+		         last_conf_replication : Tue Sep  1 18:37:09 2020
+		                      mgmt_uri : https://192.168.251.38:9089
+		                mgmt_uri_alias : https://192.168.251.38:9089
+		                        status : Up
+hdus@n1:/usr/local/shsplunk/splunk/bin$ 
+
+
+Additional commands
+--remove a member
+./splunk remove shcluster-member
+
+
+--check status
+./splunk show shcluster-status -auth <username>:<password>
+
+--check member
+
+./splunk list shcluster-config -auth <username>:<password>

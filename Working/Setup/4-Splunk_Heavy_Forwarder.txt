@@ -1,0 +1,74 @@
+Windows:
+--------
+Refer : 3-Splunk_universal_forwarder file if 'search head' instance i.e. Splunk Enterprise (localhost) 
+[(C:\Program Files\Splunk)]
+and 'universal forwarder' instance (C:\Program Files\SplunkUniversalForwarder) wasn't setup.
+If it was done, your splunk enterprise might be already running and you should have one instance of Splunk running.
+
+Let Splunkd Service run for 'Splunk Enterprise'
+Stop SplunkForwarder Service from 'services' (or we can let it run)
+
+Setup another instance to configure 'Heavy forwarder'
+-repeat steps to setup splunk
+-After Splunk web interface is ready
+http://localhost:8000 > login
+
+Settings > Licensing > change license group > Forwarder License
+
+Once restarted
+#on this instance:
+
+Settings > Forwarding and receiving > configure forwarding > add new > host> localhost:9997
+Now click on add data > monitor > Files and directories > <folder> > next 
+Host > Hostfieldvalue > nameHeavy > review > submit
+
+Let's add another source:
+Now click on add more data > monitor > Files and directories > <folder> < next > 
+Host > Hostfieldvalue > nameHeavy-sys_kernel > review > submit
+
+Note**With forwarder license you cannot search on HeavyForwarder instance.
+
+Now login into (search head) and check in data summary if events were received.
+
+=======================================================
+Linux:
+-------
+Refer : 3-Splunk_universal_forwarder file if 'search head' instance (n1) 
+and 'universal forwarder' instance n2 wasn't setup.
+
+on n2 machine: (this machine was used to setup 'universal forwarder' earlier but the path was '/usr/local/splunkforwarder')
+If intention is to run universal forwarder and heavy forwarder at same time, running them with different users 
+and changing the ownership,bashrc etc would be recommended )
+
+Visit splunk.com and login into your account
+>Free splunk
+>Splunk enterprise > Download free 60 day trial > linux > download .tgz
+>or download .deb
+
+if downloaded .tgz
+--perform steps as mentioned in '2-splunk_instance_on_ubuntu'---
+
+After Splunk web interface is ready
+http://n2:8000 > login
+
+Settings > Licensing > change license group > Forwarder License
+
+Once restarted
+
+#on n2
+Settings > Forwarding and receiving > configure forwarding > add new > host> n1:9997
+Now click on add data > monitor > Files and directories > var > next 
+Host > Hostfieldvalue > um2Heavy >review > submit
+
+Let's add another source:
+Now click on add more data > monitor > Files and directories > sys > next > 
+Host > Hostfieldvalue > um2Heavy-sys_kernel > review > submit
+
+Note**With forwarder license you cannot search on HeavyForwarder instance.
+
+Now login into n1(search head) and check in data summary if events were received.
+
+
+
+
+

@@ -1,0 +1,25 @@
+Using Transformation
+-------------------
+Let's work on hadoop log data 
+
+Using stats function
+sourcetype=hadooplog host=hadooplogNN | stats count(typeofmsg) BY host
+sourcetype=hadooplog host=hadooplogNN | stats count(typeofmsg) BY date_second
+sourcetype=hadooplog host=hadooplogNN | stats count(typeofmsg) as count_of_msgs BY date_second | sort count_of_msgs
+
+Also click on visualization > column chart 
+
+==========================
+Using top
+sourcetype=hadooplog host=hadooplogNN| top limit=20 typeofmsg
+
+Verbose mode : events > 111 
+Statistics : shows typeofmsgs, count and percent in a tabular format
+Visualizations : show 'typeofmsg' and count
+
+Similarly Using rare
+sourcetype=hadooplog host=hadooplogNN| rare limit=20 typeofmsg
+
+
+
+
