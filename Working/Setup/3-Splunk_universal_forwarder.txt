@@ -1,0 +1,148 @@
+Setup on Windows (single node, multi splunk instances)
+Splunk Enterprise setup and Universal forwarder setup on Windows
+-------------------------------------------
+1.For Splunk Enterprise setup : follow instructions as in '1-Splunk_Instance_on_Windows.txt'
+Check in services if Splunkd Service (C:\Program Files\Splunk) is running
+
+2. For Universal forwarder setup:
+Download splunk universal forwarder for windows from below mentioned link
+https://www.splunk.com/en_us/download/universal-forwarder.html
+
+Run the msi installer
+For setting up 'Universal forwarder' provide hostname: localhost
+Port would be : 8089
+For setting up 'receiver' provide hostname: localhost
+Port would be : 9997
+and check if 
+SplunkForwarder Service(C:\Program Files\SplunkUniversalForwarder) is running.
+
+WE can also check from 'Task Manager' > 'Performance' > Open resource Monitor to see services and ports being used.
+
+Now on Windows machine (for receiver):
+Access your splunk GUI web interface (as per step 1) > Search and reporting 
+Search might show
+--no data coming in (as we haven't forwarded any data/uploaded any data/configured splunk to monitor any data)
+--to forward data to this machine (find the IP of the machine)
+--configure receiving
+	Settings>Forwarding and receiving>Configure receiving > 
+add new > Listen on this port: 9997(default) > save
+#optionally from command line: 
+#$splunk enable listen 9997
+
+Now on same Windows machine (for forwarder):
+$splunk add forward-server localhost:9997 
+[if it was already configured, you see following message
+C:\Program Files\SplunkUniversalForwarder\bin>splunk add forward-server localhost:9997
+localhost:9997 forwarded-server already present]
+
+splunk list forward-server [if configured and shows as active]
+
+Splunk username: admin
+Password:
+Active forwards:
+        localhost:9997
+Configured but inactive forwards:
+        None
+
+#we need to explicitly specify which data to monitor and send to search-head
+C:\Program Files\SplunkUniversalForwarder\bin>splunk add monitor 
+I:\\GitContent\\Datasets\\hadooprelatedlogs\\Hadoop
+Added monitor of 'I:\GitContent\Datasets\hadooprelatedlogs\Hadoop'.
+
+Once done, check in Web interface > search and reporting > 
+What to Search(shows 22,060 events in this case) or look in Data Summary
+
+=====================
+Setup on Linux (multi node, multi splunk instances)
+Setting up and using Splunk Universal Forwarder on Linux
+-----------------------------
+n1>Follow Steps to setup splunk instance on Ubuntu (this will act as our Search Head instance)
+[refer : 2-Splunk_instance_on_ubuntu]
+
+n2>Setup a new ubuntu machine (this will act as Universal Forwarder)
+
+Make sure both machines can ping each other..
+
+on n2
+Setup Universal forwarder Linux
+----------------------------
+https://docs.splunk.com/Documentation/Forwarder/8.0.4/Forwarder/Installanixuniversalforwarder#Install_the_universal_forwarder_on_Linux
+
+https://www.splunk.com/en_us/download/universal-forwarder.html
+Download the .tgz file
+
+if downloaded .tgz
+$sudo su
+$cd /usr/local
+$tar -xvf /home/hdu/Downloads/splunkforwarder<tab>
+$ln -s splunkforwarder splunk
+$chown -R hdu:hdu splunk*
+$cd
+
+#to update path of splunk in .bashrc for your username:nifi
+$su hdu
+$vi .bashrc
+export SPLUNK_HOME=/usr/local/splunk
+export PATH=$PATH:$SPLUNK_HOME/bin
+$source .bashrc
+
+$splunk start
+>accept license
+>provide username for administrator
+>provide password
+
+After Splunk web interface is ready
+http://n1:8000 > login
+
+open web interface in n1
+Search might show
+--no data coming in (as we haven't forwarded any data/uploaded any data/configured splunk to monitor any data)
+--to forward data to this machine (find the IP of the machine)
+--configure receiving
+	Settings>Forwarding and receiving>Configure receiving > 
+add new > Listen on this port: 9997(default) > save
+#optionally from command line: 
+#$splunk enable listen 9997
+
+Now on n2
+cd /usr/local/splunk [Assuming the link splunk points to splunkforwarder directory]
+cd bin
+[optional: to make sure when ubuntu machine comes up forwarder starts automatically]
+[sudo ./splunk enable boot-start --accept-license >provide administrator username and pswd (if first time)]
+
+or start forwarder when needed
+$splunk start --accept-license
+>>provide administrator username and pswd (if first time)
+
+#to add address of splunk search head
+$splunk list forward-server
+$splunk add forward-server n1:9997
+$splunk list forward-server [if configured and shows as active]
+#we need to explicitly specify which data to monitor and send to search-head
+$splunk add monitor /var/log
+
+[#optionally we can point the data to an index with a sourcetype
+#$splunk add monitor /var/log/syslog -index main -sourcetype myUFServerLogs]
+
+$splunk restart
+$splunk list forward-server
+
+Now on n1
+--check if data is being received by the forwarder..
+--click on data summary
+--in search bar (index="main") if the data was send to index-->main
+
+$splunk remove monitor /var/log
+
+
+Issues:
+if pswd doesn't work
+https://www.thegeekstuff.com/2019/03/splunk-user-and-role-cli-web/
+https://community.splunk.com/t5/Security/Splunk-Admin-Password/td-p/326020
+
+
+
+
+
+
+

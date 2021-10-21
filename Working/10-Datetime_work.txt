@@ -1,0 +1,60 @@
+Working with timeseries:
+
+Working with datetime
+-------------------
+Using botsv1 datasets: attack only
+| metadata type=sourcetypes index=botsv1
+
+shows:
+Shows 22 results
+firstTime	lastTime	recentTime	sourcetype	totalCount	type
+1470009975	1472428471	1473366069	wineventlog	5173	sourcetypes
+1470009600	1472428740	1473366071	wineventlog	14218920	sourcetypes
+
+#converting time in human readable
+| metadata type=sourcetypes index=botsv1 | convert ctime(firstTime) as firstTime | convert ctime(lastTime) as lastTime
+| convert ctime(recentTime) as recentTime
+
+#Using eval with strftime
+Query:
+index="botsv1" source="WinEventLog:Microsoft-Windows-Sysmon/Operational" 
+| table _time DestinationIp DestinationPort SourceIp
+
+Query:
+index="botsv1" source="WinEventLog:Microsoft-Windows-Sysmon/Operational" 
+| eval time=strftime(_time, "%B:%Y") 
+| table time DestinationIp DestinationPort SourceIp
+
+Query:
+index=botsv1 source="WinEventLog:Microsoft-Windows-Sysmon/Operational" "3791.exe" EventCode="1" CommandLine="3791.exe" 
+ParentCommandLine="*" | table _time SystemTime CommandLine ParentCommandLine EventCode Hashes
+
+Options:
+index=botsv1 source="WinEventLog:Microsoft-Windows-Sysmon/Operational" "3791.exe" EventCode="1" CommandLine="3791.exe" 
+ParentCommandLine="*" 
+| eval time=strftime(_time, "%B:%Y") 
+|table time SystemTime CommandLine ParentCommandLine EventCode Hashes''
+
+in above query eval could be:
+| eval time=strftime(_time, "%Y") ---year
+| eval time=strftime(_time, "%H:%M") ---hour,minute
+| eval time=strftime(_time, "%H:%M:%S") ---hour,minute,seconds
+| eval time=strftime(_time, "%A:%d:%H:%M:%S") 
+
+or without eval:
+index=botsv1 source="WinEventLog:Microsoft-Windows-Sysmon/Operational" "3791.exe" EventCode="1" CommandLine="3791.exe" 
+ParentCommandLine="*" | convert ctime(_time) as TimeOfEvent
+|table TimeOfEvent SystemTime CommandLine ParentCommandLine EventCode Hashes
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,55 @@
+Setup atleast 3-4 machines
+--should have java installed
+--can ping each other
+--can ssh each other.
+
+Indexer cluster
+--would have 1 master node just to manage cluster and will not be involved in indexing
+--would have members(peer nodes) which will be used for indexing and searching
+
+Recommended : 1 node as master node and 3 as indexers.
+#provided you have 4 machines ready or reduce replication factor and search factor to->2
+Replication Factor:  (default 3) : 3 copies of Bucket
+Search Factor = 3 : number of searchable copies ( indexed data, extra files used by indexer for searching data)
+If an indexer goes down, splunk makes the non searchable copy as searchable.
+
+configure splunk instances on all nodes.
+
+on master node > n1 > settings > indexer clustering > Enable Indexer clustering >
+Select Master Node
+Replication Factor: 3
+Search Factor:3
+Security Key: pswd(optional)
+>enable master node...
+
+Restart splunk on n1
+
+Settings> Indexer Clustering --No peers configured (as of now)
+
+if via config files
+Same things can be done using CLI/ Config files 
+ls splunk_home/etc/system/local
+vi server.conf
+[Clustering]
+mode=master
+<hash of key>
+repl factor and search factor wont show up here if we chose defaults..
+
+if via command line..
+./splunk-edit  cluster-config -mode master -replication_factor 3 -search_factor=3 -secret your_key -cluster_label cluster1
+
+on n2:
+on peer node > n2 > settings > indexer clustering > Enable Indexer clustering >
+Select Peer Node
+Provide Master URI:http://n1:8089   (provide mgmt port here)
+Peer replication port: 9000
+Security Key : provide same key(optional)
+<restart>
+
+Now checking Indexer clustering as of now:
+might show: 'Slave is unable to handle request'
+
+Until we add right number of peers, it will disable indexing via peers.
+
+repeat same for n3,n4 etc..
+--Finally check your 'Indexer Clustering'

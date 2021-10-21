@@ -1,0 +1,1 @@
+--These files may need some cleanup or past experience of already working with splunk cluster setups

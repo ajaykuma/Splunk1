@@ -1,0 +1,46 @@
+Pivot editor works with Datasets.
+Datasets are created by data managers in organization and they are the rule and constraints that govern data.
+Analysts can then use Pivot editors to build visualizations based on those Datasets.
+
+Data Models > MyDataModel > Pivot (select dataset to work)
+--Clicking on dataset shows 
+Filters: All time
+Column Values: count of events in yoru dataset
+split rows (to split the pivot results by row)
+split columns (usually column values are numeric in nature,such as count,sum,avg)
+These are the values we edit in pivot editor
+--to build statistical tables
+--to build visualization
+
+Let's filter based on 
+
+Relative > earlier :180 days ago
+           Latest : begining of today
+
+Split rows : Based on _time (to have one row per day for our selected time duration)
+             Periods: days
+             sort : default
+
+
+Column Values : +
+                Field: TypeOfMsg
+                Value : count (depending on the field you may choose options)
+                Add to Table
+
+Split rows : Based on MB
+
+Area chart > x-axis (_time)
+             y-axis (Count of TypeOfMsg)
+             Color by 'MB'
+
+Try other graph options.
+
+
+
+
+
+
+
+
+
+

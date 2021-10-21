@@ -1,0 +1,19 @@
+Settings>Data Models > New Data Model
+Title: myDataModel > create
+--put datasets
+--put constraints
+Add Datasets > Root Event (is simpler & broader than search)
+               Root Search
+--select Root event
+--dataset name : myDS
+--Constraints : host=hadooplogNN (click preview and look at your dataset) > save
+
+Shows our dataset and basic metadata files (_time,host,source & sourcetype)
+We can add more fields
+
+Let's say OI team needs a data model to put data in, manipulate that deals with backupvolume, backupcreation >
+Add field > Add autoextracted fields > select some fields which may be important [we can also change datatypes]
+
+save..
+
+#we can use pivot tool (will see later)

@@ -1,0 +1,99 @@
+Splunk Visualization:
+
+Network Diagram Viz:
+Download App from splunkbase
+
+Running the example search:
+| makeresults count=12
+| streamstats count as id
+| eval from=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval to=case(id=1,"Web 1",id=2,"Web 2",id=3,"Web 3", id=4,"App Server 1",id=5,"App Server 2", id=6, "App Server 1",id=7,"App Server 2", id=8,"App Server 1",id=9,"App Server 2",id=10,"Database Server",id=11,"Database Server",id=12, "")
+| eval value=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval type=case(id=1,"sitemap",id=4,"server", id=6, "server",id=8,"server",id=10,"server",id=11,"server",id=12, "database")
+| fields from, to, value, type
+
+<all time>
+
+-creates 4 fields along with _time
+from
+to
+value
+type
+_time
+
+Looking at fields:
+Load Balancers are connected to 3 webservers.
+each webserver is connected to 2 app servers
+each appserver is connected to the database server
+& database server is not connected to anything.
+
+Click on Visualization> choose network "Network Diagram Viz"
+We can change the format to change the visual:
+Format> General
+enable physics: true
+Draggable Nodes : true
+Enable zoom: true
+Node Text Size: small
+Clustering : None
+             Group (to see high level groups)
+Default Node type: circle
+
+Links: to manage links
+Hierarchy view : True
+Hierarchy direction: Left-right
+Sort Method: Directed
+Rest Default
+
+Token : Defaults
+
+Understanding the parts of query:
+controlling 'froms' and 'to'
+| eval from=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval to=case(id=1,"Web 1",id=2,"Web 2",id=3,"Web 3", id=4,"App Server 1",id=5,"App Server 2", id=6, "App Server 1",id=7,"App Server 2", id=8,"App Server 1",id=9,"App Server 2",id=10,"Database Server",id=11,"Database Server",id=12, "") 
+
+showing what to find, when cursor moves in visualization over a component
+| eval value=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+
+choosing icons
+| eval type=case(id=1,"sitemap",id=4,"server", id=6, "server",id=8,"server",id=10,"server",id=11,"server",id=12, "database")
+
+Look for all available icons under:
+app/network-diagram-viz/available_icons
+
+Adding colors to visualizations can be done:
+| eval color=case(id=1,"green",id=4,"yellow",id=6,"yellow",id=8,"yellow",id=10,"yellow",id=11,"yellow",id=12,"red")
+
+new query:
+| makeresults count=12
+| streamstats count as id
+| eval from=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval to=case(id=1,"Web 1",id=2,"Web 2",id=3,"Web 3", id=4,"App Server 1",id=5,"App Server 2", id=6, "App Server 1",id=7,"App Server 2", id=8,"App Server 1",id=9,"App Server 2",id=10,"Database Server",id=11,"Database Server",id=12, "")
+| eval value=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval type=case(id=1,"sitemap",id=4,"server", id=6, "server",id=8,"server",id=10,"server",id=11,"server",id=12, "database")
+| eval color=case(id=1,"green",id=4,"yellow",id=6,"yellow",id=8,"yellow",id=10,"yellow",id=11,"yellow",id=12,"red")
+| fields from, to, value, type, color
+
+
+Adding colors and text to visualization
+
+| eval linktext=case(id=1,"green",id=4,"yellow",id=6,"yellow",id=8,"yellow",id=10,"yellow",id=11,"yellow",id=12,"red")
+|  eval linkcolor=case(id=1,"green",id=4,"red",id=6,"red",id=8,"red",id=10,"red",id=11,"red",id=12,"red")
+
+new query:
+| makeresults count=12
+| streamstats count as id
+| eval from=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval to=case(id=1,"Web 1",id=2,"Web 2",id=3,"Web 3", id=4,"App Server 1",id=5,"App Server 2", id=6, "App Server 1",id=7,"App Server 2", id=8,"App Server 1",id=9,"App Server 2",id=10,"Database Server",id=11,"Database Server",id=12, "")
+| eval value=case(id=1,"Load Balancer",id=2,"Load Balancer",id=3,"Load Balancer", id=4,"Web 1",id=5,"Web 1", id=6, "Web 2",id=7,"Web 2", id=8,"Web 3",id=9,"Web 3",id=10,"App Server 1",id=11,"App Server 2",id=12, "Database Server")
+| eval type=case(id=1,"sitemap",id=4,"server", id=6, "server",id=8,"server",id=10,"server",id=11,"server",id=12, "database")
+| eval color=case(id=1,"green",id=4,"yellow",id=6,"yellow",id=8,"yellow",id=10,"yellow",id=11,"yellow",id=12,"red")
+| eval linktext=case(id=1,"green",id=4,"yellow",id=6,"yellow",id=8,"yellow",id=10,"yellow",id=11,"yellow",id=12,"red")
+| eval linkcolor=case(id=1,"green",id=4,"red",id=6,"red",id=8,"red",id=10,"red",id=11,"red",id=12,"red")
+| fields from, to, value, type, color, linktext, linkcolor
+
+
+Explore create layout from
+app/network-diagram-viz/create layouts
+--Allows you to edit and save the layout
+
+Performance: shows number of nodes which can be used 
