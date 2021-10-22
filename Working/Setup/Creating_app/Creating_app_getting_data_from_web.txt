@@ -1,0 +1,63 @@
+#Getting data from web via API
+-------------
+
+Visit: https://www.themoviedb.org/ > Join TMDB > signup
+
+Visit: https://www.themoviedb.org/login and login
+
+Click on settings > API >
+Get 
+--API Key (v3 auth)
+--Example API Request
+--API Read Access Token (v4 auth)
+
+Visit: https://developers.themoviedb.org/3/getting-started/introduction
+Click on 'Movies' > 'Get upcoming' > 'Try it out'
+Provide your api_key and click on 'SEND REQUEST' and get the link
+Note** Even if webpage shows 503, get the link which can then be used in the code.
+       Test the link by pasting in browser
+
+Either in Python SDK or your own files create the code to get the data from web using their API
+For example:
+refer : 'upcoming_sampledata' to look into data.
+sample codes can be found in PyWork folder.
+tmdb_upcoming1.py
+tmdb_upcoming1.1.py
+tmdb_upcoming2.py---to get data for all pages from web source
+tmdb_upcoming3.py---build a complete application using functions to get data from web
+
+--------------
+
+in splunk :
+--create an APP and an  index(mapped to app) to hold data
+--now copy the script 'tmdb_upcoming1.py' into $SPLUNK_HOME/etc/apps/<appname>/bin/
+--in splunk > settings > Data Inputs > Scripts > New Local script
+  Script path: provide your script path
+  Script Name: verify your script name
+  Command: shows your py file
+  Interval : 60 seconds
+  > next
+  > source: _json
+    app: <your app>
+    index: <index_name>
+    > review > check if data is pulled in and populated in index.
+  
+----------------
+#to implement checkpointing, 
+Checkpointing: (adding custom logic to avoid re-indexing of already indexed data)
+index="tmdb_new1" | delete
+to clear content or delete the index and disable the script
+(verifying if a data record was not already indexed)
+
+refer: tmdb_upcoming1.1.py
+Note** Here we add functions to stream results into splunk index but after checkpointing
+
+delete 'tmdb_upcoming1.py' from $SPLUNK_HOME/etc/apps/<appname>/bin/
+copy 'tmdb_upcoming1.1.py' into $SPLUNK_HOME/etc/apps/<appname>/bin/
+
+Also create 'checkpoint' folder in $SPLUNK_HOME/etc/apps/<appname>/bin/
+and create an empty file 'checkpoint.txt' in this folder
+
+Now enable script and check if duplicates are avoided
+(additionally we can do this (although not needed): http://localhost:8000/bump)
+----------------
