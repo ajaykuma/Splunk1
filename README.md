@@ -4,4 +4,4 @@ For sample datasets refer :github.com/ajaykuma/datasets
 
 For examples in Splunk2, you might have to refer some files in Splunk1/Working
 
->>>> Content is being reviewed & updated
+> 🚧 This repository is currently being refined and improved. Stay tuned!
