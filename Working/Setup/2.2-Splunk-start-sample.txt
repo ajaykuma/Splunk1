@@ -1,4 +1,4 @@
---on Linux
+##on Linux
 hdu@um1:~$ splunk start
  
 SPLUNK GENERAL TERMS

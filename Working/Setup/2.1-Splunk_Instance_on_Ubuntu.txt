@@ -1,4 +1,4 @@
-Provisioning Splunk on Ubuntu (single standalone server)
+##Provisioning Splunk on Ubuntu (single standalone server)
 ---------------------------
 Setup a ubuntu 18.04 (in vmbox)
 Setup Java
