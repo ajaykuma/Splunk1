@@ -2,8 +2,9 @@
 --Upload data (say namenode log)
 --Remember to add field :TypeOfMsg as shown in previous exercices
 --Search and Reporting > run a query
-  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoop."
-  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoo*"
+  index=hadooplogs typeofmsg="org.apache.hadoop.hdfs."
+  or
+  index=hadooplogs typeofmsg="org.apache.hadoo*"
 --Format Timeline (zoom in /zoom out) options can be used to filter data based on time range
 Option1:
 --save the results of query as a report 'QueryRepF1' 
@@ -13,7 +14,7 @@ Option2:
 --Quick Reports
   >choose top values by time
   >shows the visualization and also the query is updated in 'Search Bar'
-  source="hadoop-hdu-namenode-um2.log" host="HadoopLog" index="logs" TypeOfMsg="org.apache.hadoo*"| timechart count by host limit=10
+  index=hadooplogs typeofmsg="org.apache.hadoo*"| timechart count by host limit=10
   >statistics tab gets updated with stats in Tabular format
 --save the resulting visualization as a report 'QueryRep1'
 

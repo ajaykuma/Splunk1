@@ -1,6 +1,7 @@
 Add Data
 --------
-Splunk Web ui > settings > add data > upload > pathoffile/syslog
+#Syslog
+Splunk Web ui > settings > add data > upload > pathoffile/syslog 
 SetSourceType: syslog
 Timestamp : Extraction <auto> (if changes then save your source type by same name or by giving a new name)
 InputSettings: Host field value : ApplSysLog
@@ -52,6 +53,8 @@ Create a new index: hadooplogs
 
 Searching:
 
+Default query: source="hadoop-hdu-datanode-um2.log" host="nn" index="hadooplogs" sourcetype="hadooplogs"
+
 q1:index="hadooplogs" <all time>
 
 q2:
@@ -59,7 +62,10 @@ q2:
 
 q3:index="hadooplogs" | stats count by host
 
-q4:index="hadooplogs" txid=40 OR txid=674
+q4:
+(we can select a field like txid and add it to search by 'events with this field'
+index="hadooplogs" txid="*"
+index="hadooplogs" txid=15 OR txid=104
 
 q5:index="hadooplogs" earliest=0
 
@@ -69,19 +75,19 @@ q7:index="hadooplogs" storageInfo="*" | table txid storageInfo
 
 q8:index="hadooplogs" storageInfo="*" | stats dc(storageInfo) count
 
-#create a new field 'TypeofMsg'  by refering to '11-Searching_Data_own_fields.txt'
+#create a new field 'TypeofMsg'  by refering to '11-Searching_Data_own_fields.txt' (--later)
 q9:index="hadooplogs" TypeofMsg="*" | stats count by TypeofMsg
 
-index="hadooplogs" | stats count(TypeofMsg) by source
+	index="hadooplogs" | stats count(TypeofMsg) by source
 
-index="hadooplogs" | stats count(TypeofMsg) by source _time | table _time source count(TypeofMsg) | sort _time desc
+	index="hadooplogs" | stats count(TypeofMsg) by source _time | table _time source count(TypeofMsg) | sort _time desc
 
-index="hadooplogs" | eval time=strftime(_time, "%B:%Y") | table time TypeofMsg source|
+	index="hadooplogs" | eval time=strftime(_time, "%B:%Y") | table time TypeofMsg source|
 
-#provided TypeofMsg(WARN/INFO/ERROR/FATAL) and ClassResp (for org.apache.hadoop.. pattern) fields were extracted
-index="hadooplogs" | table _time TypeofMsg ClassResp | rename _time as Time TypeofMsg as Message ClassResp as Class
+	#provided TypeofMsg(WARN/INFO/ERROR/FATAL) and ClassResp (for org.apache.hadoop.. pattern) fields were extracted
+	index="hadooplogs" | table _time TypeofMsg ClassResp | rename _time as Time TypeofMsg as Message ClassResp as Class
 
-index="hadooplogs" | stats count(TypeofMsg) by source _time | table _time source count(TypeofMsg) | sort _time desc
+	index="hadooplogs" | stats count(TypeofMsg) by source _time | table _time source count(TypeofMsg) | sort _time desc
 
 #create additional field by highlighting 'org.apache.hadoop.hdfs.server' > clsofmsg
 
@@ -124,6 +130,8 @@ for example from our past queries :
 
 in search bar > source="syslog" host="ApplSysLog" index="application_log" sourcetype="syslog" | delete
               > index=* host=HP_Appl_Log | delete
+or
+	      index="hadooplogs" txid=15 OR txid=104 | delete
 
 Login back as admin and check if data exists
 
@@ -131,9 +139,13 @@ Login back as admin and check if data exists
 
 ======================
 Example 2:
-Uploading SalesJan2009 data 
+Uploading SalesJan2009 data with default settings
+
 
 Sample queries :
+Default query: source="SalesJan2009.csv" host="SalesData" index="salesreport" sourcetype="csv"
+
+Other queries:
 source="SalesJan2009.csv" host="SalesData" index="salesreport" sourcetype="csv" Payment_Type = Visa* OR Mastercard*
 (shows 799 events)
 source="SalesJan2009.csv" host="SalesData" index="salesreport" sourcetype="csv" Payment_Type = Visa

@@ -1,3 +1,4 @@
+--on Linux
 hdu@um1:~$ splunk start
  
 SPLUNK GENERAL TERMS
@@ -5,22 +6,7 @@ SPLUNK GENERAL TERMS
 Last updated: February 13, 2020
 
 These Splunk General Terms ("General Terms") between 
-Splunk Inc., a Delaware corporation, with its principal place 
-of business at 270 Brannan Street, San Francisco, 
-California 94107, U.S.A ("Splunk" or "we" or "us" or "our") 
-and you ("Customer" or "you" or "your") apply to the 
-purchase of licenses and subscriptions for Splunk's 
-Offerings. By clicking on the appropriate button, or by 
-downloading, installing, accessing or using the Offerings, 
-you agree to these General Terms. If you are entering into 
-these General Terms on behalf of Customer, you represent 
-that you have the authority to bind Customer. If you do not 
-agree to these General Terms, or if you are not authorized 
-to accept the General Terms on behalf of the Customer, do 
-not download, install, access, or use any of the Offerings.
-
-See the General Terms Definitions Exhibit attached for 
-definitions of capitalized terms not defined herein. 
+...
 
 1. License Rights
 

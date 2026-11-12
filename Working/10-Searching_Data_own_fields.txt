@@ -1,8 +1,10 @@
-Web UI > load hadoop namenode log
+Web UI > load hadoop namenode log > add to same index if existing hadooplogs
 
-Search > source="hadoop-hdu-namenode-um2.log" host="hadooplogNN" sourcetype="hadooplog"  (all time)
-Look for selected and inserting fields.
+Search > default: source="hadoop-hdu-namenode-um2.log" host="hadooplogNN" index="hadooplogs" sourcetype="hadooplogs"
+or specific: index="hadooplogs" sourcetype="hadooplogs"
 
+ 
+Look for selected and interesting fields.
 We would want to search events with specific type of msgs..
 
 Click on +Extract new fields
@@ -31,7 +33,10 @@ Success
 >explore the fields I just created in search
 
 Queries in Search Bar
-index=_* OR index=* sourcetype=hadooplog
-sourcetype=hadooplog host=hadooplogNN typeofmsg="*" "2019-09-*"
+> index=_* OR index=* sourcetype=hadooplog
+> sourcetype=hadooplog host=hadooplogNN typeofmsg="*" "2019-09-*"
+> index=_* OR index=* sourcetype=hadooplogs typeofmsg="*"
 
 etc..
+
+we can addtionally select or highlight a field from results of a query and add it to an existing query..
