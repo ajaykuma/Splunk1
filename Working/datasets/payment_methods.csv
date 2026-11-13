@@ -1,0 +1,5 @@
+Payment_Type,Payment_Description,Category
+Visa,Visa Card,Credit Card
+Mastercard,Mastercard Card,Credit Card
+Amex,American Express,Credit Card
+Diners,Diners Club,Credit Card

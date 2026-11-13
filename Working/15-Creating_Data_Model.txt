@@ -1,19 +1,169 @@
+Understanding data:
+
+SalesJan2009.csv > Splunk Index (salesreport) 
+> Sales Data Model
+Root dataset: Sales
+- Transaction details
+- Customer details
+- Payment details
+- Geographical details
+
+>Datasets(fields & constraints)
+>Pivot (visual reports)
+
+--------->Sales Analytics: Revenue, products, customers, payment methods and countries
+
+A Data Model does not itself import data; it works on data that Splunk can search.
+
+First build salesreport index from SalesJan2009.csv (csv being the source type)
+index=sales_data
+| head 10
+
+index=sales_data
+| stats count
+
+index=salesreport
+| table Transaction_date Product Price Payment_Type Country City
+
+Questions we can answer using the raw data:
+
+Total sales revenue:
+index=salesreport
+| stats sum(Price) as Total_Revenue
+
+Revenue by product:
+index=salesreport
+| stats sum(Price) as Revenue
+        count as Transactions
+        avg(Price) as Average_Price
+        by Product
+| sort - Revenue
+
+Revenue by country:
+index=salesreport
+| stats sum(Price) as Revenue
+        count as Transactions
+        by Country
+| sort - Revenue
+| head 10
+
+Payment method analysis:
+index=salesreport
+| stats count as Transactions
+        sum(Price) as Revenue
+        by Payment_Type
+
+Product and payment method comparison:
+index=salesreport
+| stats count as Transactions
+        sum(Price) as Revenue
+        by Product Payment_Type
+
+Daily sales trend:
+(transaction timestamp is stored as a CSV string, so explicitly convert it)
+index=salesreport
+| eval Transaction_Time=strptime(Transaction_date,"%m/%d/%Y %H:%M")
+| timechart span=1d sum(Price) as Revenue
+
+Creating data model:
 Settings>Data Models > New Data Model
-Title: myDataModel > create
+Title: myDataModel (same for ID) > create
 --put datasets
 --put constraints
 Add Datasets > Root Event (is simpler & broader than search)
                Root Search
---select Root event
---dataset name : myDS
---Constraints : host=hadooplogNN (click preview and look at your dataset) > save
+--select Root event (Because every transaction in our CSV represents an individual sales event. We want the root dataset to contain all those events.)
+--dataset name : AllSales (same ID)
+--Constraints : index=salesreport (click preview and look at your dataset) > save
+Note** Constraint is imp, as tt tells Splunk that this dataset represents all events belonging to the salesreport index.
 
 Shows our dataset and basic metadata files (_time,host,source & sourcetype)
 We can add more fields
 
-Let's say OI team needs a data model to put data in, manipulate that deals with backupvolume, backupcreation >
+Let's say OI team needs a data model to put data in, manipulate the deals with something.. >
 Add field > Add autoextracted fields > select some fields which may be important [we can also change datatypes]
+Add fields to the dataset
+Our root dataset should expose the following fields:
+Field			Field type
+Transaction_date	Auto-extracted
+Product			Auto-extracted
+Price			Auto-extracted
+Payment_Type		Auto-extracted
+Name			Auto-extracted
+City			Auto-extracted
+State			Auto-extracted
+Country			Auto-extracted
+Account_Created		Auto-extracted
+Last_Login		Auto-extracted
+Latitude		Auto-extracted
+Longitude		Auto-extracted
+Note**Price, Latitude and Longitude fields have numeric types.Splunk supports auto-extracted fields, calculated fields and other field types in data models.
 
 save..
 
-#we can use pivot tool (will see later)
+#Datasets:
+Instead of creating separate data models for every product or payment method, we can create one parent dataset and several child datasets.
+
+AllSales(Root Event Dataset - index=salesreport)
+Product1 Sales(Product=Product1)
+Product2 Sales(Product=Product2)
+Visa Transactions(Payment_Type=Visa)
+Mastercard Transactions(Payment_Type=Mastercard)
+
+A child dataset inherits the fields and constraints of its parent and adds its own filtering constraint.
+
+So lets create child datasets.
+In DM editor, choose AllSales and cick on edit dataset> child 
+dataset name: Visa Transactions
+dataset ID: Visa_Transactions
+Constraints: Payment_Type="Visa"
+
+Similarly:
+Mastercard Transactions
+Mastercard_Transactions
+Payment_Type="Mastercard"
+
+High Value Sales
+Price >= 100
+
+Now querying:
+From index:
+index=salesreport
+| stats count
+
+From Data model:
+| datamodel myDataModel AllSales search
+| stats count
+
+--datamodel tells Splunk to access a Data Model.
+--myDataModel identifies your Data Model.
+--AllSales identifies the root dataset.
+--search instructs Splunk to return matching events.
+--Use flat mode
+
+| datamodel myDataModel AllSales flat
+| table Product Price Payment_Type Country City
+| head 20
+
+------------------------------
+Business analysis using data model
+| datamodel myDataModel AllSales flat
+| stats sum(Price) as Total_Revenue
+        count as Transactions
+        avg(Price) as Average_Price
+        by Product
+| sort - Total_Revenue
+-------------------------------------
+| datamodel myDataModel Visa_Transactions flat
+| stats count as Transactions
+        sum(Price) as Revenue
+-------------------------------------
+| datamodel myDataModel Mastercard_Transactions flat
+| stats count as Transactions
+        sum(Price) as Revenue
+-------------------------------------
+| datamodel myDataModel High_Value_Sales flat
+| stats count as Transactions
+        sum(Price) as Revenue
+
+#Now working with Pivot.

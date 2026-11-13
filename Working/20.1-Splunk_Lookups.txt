@@ -1,0 +1,465 @@
+SPLUNK LOOKUPS 
+
+Environment
+
+Splunk Enterprise running locally on Windows. Splunk Web:
+http://127.0.0.1:8000 Search app: Search & Reporting Source index:
+salesreport Dataset: SalesJan2009.csv (998 events)
+
+##LOOKUP FUNDAMENTALS
+
+What is a lookup?
+
+A lookup adds information from a separate reference table to events
+during a search. For example, a sales event may contain
+Payment_Type=“Visa”. A lookup can add Payment_Description=“Visa Card”
+and Category=“Credit Card”.
+
+Main lookup types
+
+1.  CSV lookup
+    -   Uses a CSV file as the reference table.
+    -   Useful for small or moderate, relatively static reference data.
+    -   Example: payment method descriptions.
+2.  KV Store lookup
+    -   Uses a collection in Splunk’s KV Store.
+    -   Useful when records need to be created, updated, or deleted
+        individually.
+    -   Supports REST API access and record-level operations.
+3.  Scripted lookup
+    -   Uses an external script to generate lookup results.
+    -   Useful when lookup values must be obtained dynamically from an
+        external source or custom logic.
+4.  Geospatial lookup
+    -   Uses geographic feature data, such as country or state
+        boundaries.
+    -   Can support geographic searches and visualizations.
+
+#Files and definitions
+
+A CSV lookup generally has: - Lookup table file: the actual CSV file. -
+Lookup definition: tells Splunk how to use the file and gives it a name.
+
+A KV Store lookup generally has: - KV Store collection: the actual
+stored records. - Lookup definition: connects SPL searches to that
+collection.
+
+A lookup definition is not the data itself.
+
+##PART 2 — CSV LOOKUP 
+
+Scenario
+Enrich sales events with payment method descriptions.
+
+Step 1: Create the CSV file
+
+File name: payment_methods.csv
+CSV contents:
+
+Payment_Type,Payment_Description,Category Visa,Visa Card,Credit Card
+Mastercard,Mastercard Card,Credit Card Amex,American Express,Credit Card
+Diners,Diners Club,Credit Card
+
+Make sure Windows has not saved it as payment_methods.csv.txt.
+
+Step 2: Upload the CSV
+In Splunk Web: Settings > Lookups > Lookup table files > Add new
+Upload payment_methods.csv into the Search & Reporting app.
+
+Step 3: Create the lookup definition
+
+In Splunk Web: Settings > Lookups > Lookup definitions > Add new
+Configuration used: Destination app: Search & Reporting Name:
+payment_emthods Type: File-based Lookup file: payment_methods.csv
+
+NOTE: The definition name here contains a typo: “payment_emthods”
+(not “payment_methods”). The SPL examples use the
+actual definition name that was created. The definition name does not
+have to match the CSV filename.
+
+Step 4: Test the CSV file itself
+
+SPL:
+
+inputlookup payment_methods.csv
+
+Purpose: Reads the CSV file directly & confirms the uploaded file was readable.
+
+Step 5: Enrich sales events
+
+SPL:
+
+index=salesreport | lookup payment_emthods Payment_Type OUTPUT
+Payment_Description Category | table Product Payment_Type
+Payment_Description Category Price | head 20
+
+Explanation: index=salesreport Search the sales events.
+lookup payment_emthods Use the lookup definition named payment_emthods.
+Payment_Type Match this event field to the Payment_Type column in the CSV.
+OUTPUT Payment_Description Category Add these fields from the matching CSV row.
+
+Important: The lookup command uses the lookup DEFINITION name, not the
+CSV filename. 
+
+Step 6: OUTPUT versus OUTPUTNEW
+
+OUTPUT: Adds lookup fields and overwrites fields with the same names if they already exist in the event.
+
+Example:
+
+index=salesreport | eval Category=“Original_Category” | lookup
+payment_emthods Payment_Type OUTPUT Category | table Payment_Type
+Category | head 10
+
+Expected behaviour: Category is replaced with the value from the CSV
+(Credit Card).
+
+OUTPUTNEW: Adds a lookup field only when that field does not already exist in the event.
+
+Example:
+
+index=salesreport | eval Category=“Original_Category” | lookup
+payment_emthods Payment_Type OUTPUTNEW Category | table Payment_Type
+Category | head 10
+
+Expected behaviour: Category remains “Original_Category”.
+
+If Category does not already exist, OUTPUTNEW adds it from the lookup.
+
+Step 7: Simulate an unmatched lookup value
+
+SPL:
+
+index=salesreport | eval
+Payment_Type=if(Product=“Product3”,“Bitcoin”,Payment_Type) | lookup
+payment_emthods Payment_Type OUTPUT Payment_Description Category | table
+Product Payment_Type Payment_Description Category | head 20
+
+Explanation: This deliberately changes Payment_Type to Bitcoin for
+Product3 events. Bitcoin is not present in the CSV, so the lookup
+description/category are blank for those events.
+
+Step 8: Find unmatched values
+
+SPL:
+
+index=salesreport | eval
+Payment_Type=if(Product=“Product3”,“Bitcoin”,Payment_Type) | lookup
+payment_emthods Payment_Type OUTPUT Payment_Description | where
+isnull(Payment_Description) | stats count by Payment_Type
+
+Explanation: isnull(Payment_Description) identifies events for which the
+lookup did not supply a description. This is useful for finding missing
+reference data or unexpected values.
+
+Step 9: Create a lookup file from search results
+
+SPL:
+
+index=salesreport | stats count as Total_Transactions sum(Price) as
+Total_Revenue by Payment_Type | outputlookup payment_summary.csv
+
+Explanation: stats creates one summary row per Payment_Type.
+outputlookup writes the results into payment_summary.csv.
+
+Verify:
+
+inputlookup payment_summary.csv
+
+NOTE: outputlookup can create a lookup table file from search results.
+It does not automatically create a lookup definition for that file.
+
+Step 10: Append a row
+
+SPL:
+
+makeresults
+eval Payment_Type=“Bitcoin”, Total_Transactions=10, Total_Revenue=5000
+outputlookup append=true payment_summary.csv
+
+Verify:
+
+inputlookup payment_summary.csv
+sort Payment_Type
+
+Explanation: append=true appends the generated row to the existing CSV lookup.
+
+Step 11: Rebuild/replace the CSV lookup
+
+SPL:
+
+index=salesreport | stats count as Total_Transactions sum(Price) as
+Total_Revenue by Payment_Type | outputlookup payment_summary.csv
+
+Verify:
+
+inputlookup payment_summary.csv
+
+Explanation: Without append=true, outputlookup replaces the lookup
+contents with the current search results. The manually appended Bitcoin
+row disappears because Bitcoin is not in the original sales data.
+
+CSV LOOKUP COMMAND SUMMARY
+
+inputlookup filename.csv Read a lookup table.
+
+lookup lookup_definition match_field OUTPUT fields Enrich events using a
+lookup.
+
+lookup lookup_definition match_field OUTPUTNEW fields Add fields only if
+they do not already exist.
+
+outputlookup filename.csv Write/replace lookup contents.
+
+outputlookup append=true filename.csv Append rows to an existing lookup.
+
+##PART 3 — KV STORE LOOKUP
+
+Scenario
+
+Create a small movie collection and use it as a lookup.
+
+Movie data used: id=101, name=Inception, genre=Sci-Fi id=102,
+name=Interstellar, genre=Sci-Fi id=103, name=Titanic, genre=Romance
+(later changed to Drama, then Thriller)
+
+Important distinction: id is our business/movie identifier. _key is
+Splunk’s internal unique KV Store record identifier. They are not
+guaranteed to be the same.
+
+Step 1: Create collections.conf on Windows
+
+Splunk installation path used: <Splunk path>
+
+Create the local folder if it does not exist, then create:
+
+collections.conf
+
+Contents:
+
+[tmdb_kvstore] enforceTypes = false field.id = string field.name =
+string field.genre = string
+
+Explanation: [tmdb_kvstore] Name of the KV Store collection.
+
+enforceTypes = false Does not strictly enforce the configured field
+types.
+
+field.id, field.name, field.genre Define the fields used by this
+collection.
+
+NOTE: collections.conf defines the collection structure. It is not the
+lookup definition itself.
+
+Step 2: Restart Splunk
+
+Splunk was restarted using Windows Services (services.msc) / Splunkd.
+
+A command-line alternative (run Command Prompt as Administrator):
+
+cd “path” splunk restart
+
+Step 3: Create the KV Store lookup definition
+
+In Splunk Web: Settings > Lookups > Lookup definitions > Add new
+
+Configuration: Destination app: Search & Reporting Name: tmdb_lookup
+Type: KV Store Collection: tmdb_kvstore Supported fields: id,name,genre
+
+The supported fields identify the fields exposed by this lookup
+definition.
+
+Do not add _key as an ordinary supported business field . Splunk manages _key as the internal record identifier.
+
+Step 4: Test the collection
+
+SPL:
+
+inputlookup tmdb_lookup
+
+The lookup returned no results and no error because the collection was
+empty. This confirmed that the lookup definition could access the
+collection.
+
+Step 5: Populate the collection
+
+SPL:
+
+makeresults
+eval id=“101”, name=“Inception”, genre=“Sci-Fi”
+append [ | makeresults | eval id=“102”, name=“Interstellar”,
+genre=“Sci-Fi”
+
+] | append [ | makeresults | eval id=“103”, name=“Titanic”,
+genre=“Romance”] | outputlookup tmdb_lookup
+
+Verify:
+
+inputlookup tmdb_lookup
+table id name genre
+
+Expected records: 101 Inception Sci-Fi 102 Interstellar Sci-Fi 103
+Titanic Romance
+
+Step 6: Inspect the actual KV Store keys
+
+The lookup definition exposed id, name, and genre, but _key was not
+shown through the lookup search.
+
+To inspect the underlying collection and its internal keys, use the
+Splunk management REST API on port 8089.
+
+The shared app namespace - https://localhost:8089/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore
+
+Windows Command Prompt example:
+
+curl -k -u adminaj
+“https://localhost:8089/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore”
+
+The -u adminaj option prompts for the password. 
+
+The REST response shows:
+
+Inception: id: 101 _key: 6af6c6058451fc20e50439d0
+Interstellar: id: 102 _key: 6af6c6058451fc20e50439d1
+Titanic: id: 103 _key: 6af6c6058451fc20e50439d2
+
+IMPORTANT: _key values were generated by Splunk. Titanic’s business id was 103, but its actual _key was 6af6c6058451fc20e50439d2.
+
+Namespace lesson: adminaj/search refers to the user’s namespace.
+nobody/search refers to the shared app namespace. Our collection records were stored in the shared app namespace.
+
+Step 7: Enrich events with the KV Store lookup
+
+SPL:
+
+makeresults
+eval id=“101”
+append [ | makeresults | eval id=“102”
+
+] | append [ | makeresults | eval id=“103”] | lookup tmdb_lookup id
+OUTPUT name genre | table id name genre
+
+Explanation: The lookup command works with a KV Store lookup definition
+in a similar way to a CSV lookup. It matches the event’s id field with
+the collection’s id field and adds name and genre.
+
+Step 8: Correctly understand record updates
+
+The collection to be built with exactly three records using outputlookup without append=true:
+
+makeresults
+eval id=“101”, name=“Inception”, genre=“Sci-Fi”
+append [ | makeresults | eval id=“102”, name=“Interstellar”,
+genre=“Sci-Fi”
+
+] | append [ | makeresults | eval id=“103”, name=“Titanic”,
+genre=“Drama”] | outputlookup tmdb_lookup
+
+
+Step 9: Update one record through REST API
+
+The correct collection namespace was nobody/search.
+
+Titanic’s actual _key:
+
+6af6c6058451fc20e50439d2
+
+Command used:
+
+curl -k -u adminaj
+“https://localhost:8089/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/6af6c6058451fc20e50439d2”
+-X POST -H “Content-Type: application/json” -d
+“{"id":"103","name":"Titanic","genre":"Thriller"}”
+
+The REST API returned the updated record:
+
+{ “id”: “103”, “name”: “Titanic”, “genre”: “Thriller”, “_user”:
+“nobody”, “_key”: “6af6c6058451fc20e50439d2” }
+
+Verify from REST:
+
+curl -k -u adminaj
+“https://localhost:8089/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/6af6c6058451fc20e50439d2”
+
+Verify from Splunk Search:
+
+inputlookup tmdb_lookup
+table id name genre
+
+Titanic showed genre=Thriller.
+
+Step 10: Delete one record through REST API
+
+Titanic was deleted using its _key:
+
+curl -k -u adminaj
+“https://localhost:8089/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/6af6c6058451fc20e50439d2”
+-X DELETE
+
+Then verify in Splunk:
+
+inputlookup tmdb_lookup
+table id name genre
+
+Only Inception and Interstellar should remain.
+
+This deletes the individual record, not the entire collection.
+
+KV STORE REST API OPERATIONS
+
+Read all records: GET
+/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore
+
+Read one record: GET
+/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/<_key>
+
+Update one record: POST
+/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/<_key>
+
+Delete one record: DELETE
+/servicesNS/nobody/search/storage/collections/data/tmdb_kvstore/<_key>
+
+Use the correct namespace for the app/collection. Here it was:
+nobody/search
+
+Security: Port 8089 is Splunk’s management port. -k disables TLS
+certificate verification; it is acceptable for this local training setup
+but should not be copied blindly into production. Use secure credential
+handling. Never save passwords in command text, scripts, or training
+notes.
+
+PART 4 — CSV LOOKUP VS KV STORE LOOKUP
+
+CSV lookup: - Data stored in a CSV file. - Good for relatively static
+reference data. - Easy to edit as a spreadsheet. - Usually updated by
+replacing or appending file contents. - Example: payment_methods.csv.
+
+KV Store lookup: - Data stored in a KV Store collection. - Good for
+reference data that changes more frequently. - Supports individual
+record create/read/update/delete operations. - Can be accessed through
+SPL and REST API. - Uses internal _key values to identify records. -
+Example: tmdb_kvstore.
+
+Both can be used with the SPL lookup command to enrich events.
+
+##PART 5 — Advanced TOPICS 
+1.  Automatic lookups Configure Splunk to apply a lookup automatically
+    to matching events, without explicitly writing | lookup in every
+    search.
+
+2.  Scripted lookups Configure an external script to provide lookup
+    results.
+
+3.  Geospatial lookups Learn geographic lookup data and commands such
+    as: geostats geom geomfilter
+
+4.  Enterprise lookup scenarios
+
+    -   Data enrichment
+    -   Reference data maintenance
+    -   Missing lookup value detection
+    -   Lookup permissions and sharing
+    -   Choosing CSV versus KV Store
+
+

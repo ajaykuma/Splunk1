@@ -1,0 +1,155 @@
+#The Pivot interface is essentially a visual query builder. It constructs SPL behind the scenes.
+
+Pivot editor works with Datasets.
+Datasets are created by data managers in organization and they are the rule and constraints that govern data.
+Analysts can then use Pivot editors to build visualizations based on those Datasets.
+
+Data Models > MyDataModel > Pivot (select dataset to work)
+Revenue by Product summary:
+SPL:
+| datamodel myDataModel AllSales flat
+| stats sum(Price) by Product
+
+--Clicking on dataset shows 
+Filters: All time
+split rows: product (to split the pivot results by row)
+split columns (usually column values are numeric in nature,such as count,sum,avg)
+These are the values we edit in pivot editor
+--to build statistical tables
+--to build visualization
+
+column values: sum of price
+	       count of AllSales
+
+Look at results
+Product1 generates the highest revenue, even though its individual transaction price is much lower than Product2 and Product3.
+Product		Sum of Price	Count of AllSales
+Product1	1016700			847
+Product2	489600			136
+Product3	112500			15
+
+equivalent:
+| pivot myDataModel AllSales
+    count(AllSales) AS "Count of AllSales"
+    sum(Price) AS "Sum of Price"
+    SPLITROW Product AS Product
+
+#Revenue by Product and Payment Type.(using splitcol) i.e. cross-tabulation of Product × Payment Type.
+How much revenue does Product1 generate through Visa?
+Does Product2 generate more revenue through Mastercard or Visa?
+Which payment method contributes the most overall?
+
+New Pivot:
+Split rows: Product
+Split columns: Payment_type
+column value: sum(price) & Count(AllSales)
+
+Product		Amex:::	Count of AllSales	Amex:::Sum of Price	Diners:::Count of AllSales	Diners:::Sum of Price	Mastercard:::Count of AllSales	Mastercard:::Sum of Price	Visa:::Count of AllSales	Visa:::Sum of Price
+Product1	88				105800			81				97200			233				280550				445				533150
+Product2	21				75600			6				21600			39				140400				70				252000
+Product3	1				7500			2				15000			5				37500				7				52500
+
+
+1. Visa dominates: It generates the highest revenue for all three products.
+2. Product1 is the biggest contributor: Visa alone generates 533,150 in Product1 revenue.
+3. Product3 has the highest transaction value: Its transactions are worth 7,500 each, irrespective of payment type.
+Notice that Product1 has 445 Visa transactions, while Product2 has only 70.
+
+| pivot myDataModel AllSales
+    count(AllSales) AS "Count of AllSales"
+    sum(Price) AS "Sum of Price"
+    SPLITROW Product AS Product
+    SPLITCOL Payment_Type
+
+SPLITROW Product — groups transactions by product.
+SPLITCOL Payment_Type — creates separate column groups for each payment method.
+
+
+Conclusion:
+Indexes store and make data searchable. SPL searches and analyzes it. Data Models organize it into reusable business structures. 
+Pivot lets people explore those structures without writing SPL.
+
+Simple queries could be:
+index=salesreport
+| stats sum(Price) as Revenue by Product
+| sort - Revenue
+
+or
+
+index=salesreport Payment_Type="Visa"
+| stats sum(Price) as Revenue by Country
+
+But when we need Organizing data for reuse: Data Model
+for a retail company.
+
+Different teams want to analyze the same sales data:
+- Finance wants revenue by product.
+- Sales wants transactions by payment method.
+- Management wants high-value transactions.
+- Regional managers want sales by country.
+Without a Data Model, each person might write their own SPL query, remember the index name, 
+remember field names, and apply the right filters.
+
+So with data model:someone can use a predefined dataset rather than remembering all the underlying index constraints.
+Ex:
+| datamodel myDataModel Visa_Transactions flat
+| stats count by Country
+
+Data Model provides a common structure that Pivot, dashboards, and other Splunk capabilities can use.
+
+#Acceleration
+Without acceleration, Splunk calculates your results by searching the underlying events. 
+With acceleration, Splunk maintains precomputed summaries that can be reused for supported searches.
+
+Say we run:
+index=salesreport
+| stats sum(Price) as Revenue by Product
+
+Every time this search runs, Splunk searches the matching events and calculates the revenue for each product.
+
+With Data Model Acceleration
+We already created myDataModel, with AllSales as its root dataset.
+we can enable acceleration for this Data Model.
+Splunk then builds and maintains summaries for eligible fields and calculations over the selected time range.
+
+Settings> data models
+Edit> edit acceleration > but first edit permissions (all Apps: read and write)
+Then we can edit acceleration
+Check Accelerate.
+Set Summary Range to All Time.
+
+(in Advanced settings:
+Backfill range: All time --Build summaries for all existing indexed data within the model's constraints.
+Max summarization searchtime:1 hour --Maximum time allowed for an individual summarization search.
+Custom max time: 3600 --1hour
+Maximum concurrent summarization searches: 3 --	Allow up to three summarization searches concurrently.
+Poll buckets for data to summarize: not checked --Splunk uses its normal scheduling mechanism rather than polling buckets.
+Summarization period: */5 * * * * --Schedule summarization every five minutes.
+Automatic rebuilds: selected --Allow Splunk to rebuild summaries when necessary.
+)
+
+Splunk starts building the acceleration summary. Initially, its status may show Building; wait until it reports Complete.
+Return to Settings → Data Models, expand myDataModel, and look for:
+Metric		What it tells you
+Status		Whether summary building is complete
+Access Count	How often the summary has been used
+Size on Disk	Storage consumed
+Summary Range	How far back data is summarized
+Updated		When the summary was last updated
+
+After summary is built:
+| tstats sum(AllSales.Price) as Revenue
+  from datamodel=myDataModel
+  by AllSales.Product
+
+compare with non accelerated version:
+index=salesreport
+| stats sum(Price) as Revenue by Product
+
+tstats is particularly useful because it can retrieve statistical results from accelerated Data Models without reading all the underlying raw events.
+
+
+
+
+
+
