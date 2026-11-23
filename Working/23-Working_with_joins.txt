@@ -1,8 +1,30 @@
 #using join,map,selfjoin
 ----------------------
 
+#HTTP events
+index=botsv1 source="stream:http"
+| stats count by sourcetype
+
 index="botsv1" source="stream:http" 
 |  stats count by dest_ip
+
+Suricata events:
+index=botsv1 sourcetype="suricata"
+| stats count by sourcetype
+
+--check if dest_ip exists in both
+index=botsv1 source="stream:http"
+| stats count by dest_ip
+| sort - count
+| head 10
+
+index=botsv1 sourcetype="suricata"
+| stats count by dest_ip
+| sort - count
+| head 10
+
+##Understanding join
+--join combines results from two searches using a common field.
 
 #inner join
 index="botsv1" source="stream:http" 
@@ -12,20 +34,47 @@ index="botsv1" source="stream:http"
     [| search index="botsv1" sourcetype="suricata"]
 
 #innerjoin
-index="botsv1" source="stream:http" 
-|  table source,sourcetype,action,http_method,dest_ip 
-|  head 10 
+1. The primary search retrieves HTTP events.
+2. head 10 limits the primary results to 10 events.
+3. table selects the HTTP fields.
+4. The subsearch retrieves Suricata events.
+5. join matches both datasets using dest_ip.
+6. Only matching records are returned.
+Important: join defaults to type=inner
+
+index=botsv1 source="stream:http"
+| head 10
+| table source sourcetype action http_method dest_ip
 | join type=inner dest_ip
-    [| search index="botsv1" sourcetype="suricata" 
-    | table dest_ip,sourcetype,flow.bytes_toclient,flow.bytes_toserver,transport]
+    [
+        search index=botsv1 sourcetype="suricata"
+        | table dest_ip sourcetype flow.bytes_toclient flow.bytes_toserver transport
+    ]
+
+--inner join with selected fields
+index=botsv1 source="stream:http"
+| head 10
+| join type=inner dest_ip
+    [
+        search index=botsv1 sourcetype="suricata"
+        | stats
+            sum('flow.bytes_toclient') as bytes_to_client
+            sum('flow.bytes_toserver') as bytes_to_server
+            values(transport) as transport
+            by dest_ip
+    ]
+| table source sourcetype action http_method dest_ip bytes_to_client bytes_to_server transport
+
 
 #outerjoin
-index="botsv1" source="stream:http" 
-|  table source,sourcetype,action,http_method,dest_ip 
-|  head 10 
+index="botsv1" source="stream:http"
+| table source sourcetype action http_method dest_ip
+| head 10
 | join type=outer dest_ip
-    [| search index="botsv1" sourcetype="suricata" 
-    | table dest_ip,sourcetype,flow.bytes_toclient,flow.bytes_toserver,transport]
+    [
+        search index="botsv1" sourcetype="suricata"
+        | table dest_ip sourcetype flow.bytes_toclient flow.bytes_toserver transport
+    ]
 
 #we can use left and right too
 
@@ -40,22 +89,42 @@ index="botsv1" source="stream:http"
     [| search index="botsv1" sourcetype="suricata" 
     | table dest_ip,sourcetype,flow.bytes_toclient,flow.bytes_toserver,transport]
 
-#using overwrite
-#innerjoin
-index="botsv1" source="stream:http" 
-| eval dest_ip="notfound"
-|  table source,sourcetype,action,http_method,dest_ip 
-|  head 10 
-| join type=inner max=0 overwrite=false dest_ip
-    [| search index="botsv1" sourcetype="suricata" 
-    | table dest_ip,sourcetype,flow.bytes_toclient,flow.bytes_toserver,transport]
-
-#Map Search
-index="botsv1" source="stream:http" 
-|  table source,sourcetype,action,http_method,dest_ip 
-| map search="|search index="botsv1" sourcetype="suricata" | search dest_ip="192.168.225.125""
-
 or
+index=botsv1 source="stream:http"
+| head 10
+| join type=outer max=0 dest_ip
+    [
+        search index=botsv1 sourcetype="suricata"
+        | table dest_ip flow.bytes_toclient flow.bytes_toserver transport
+    ]
+
+#Understanding overwrite=false
+#using overwrite
+Suppose both searches have a field called sourcetype.
+- Primary search has sourcetype=stream:http.
+- Subsearch has sourcetype=Suricata.
+With overwrite=false, the primary search's existing value is retained when there is a field-name conflict.
+
+With the default overwrite=true, matching fields from the subsearch can overwrite the primary search's values.
+
+index=botsv1 source="stream:http"
+| head 10
+| join type=inner max=0 overwrite=false dest_ip
+    [
+        search index=botsv1 sourcetype="suricata"
+        | eval sourcetype="Suricata"
+        | table dest_ip sourcetype flow.bytes_toclient flow.bytes_toserver transport
+    ]
+| table source sourcetype action http_method dest_ip flow.bytes_toclient flow.bytes_toserver transport
+
+#Understanding Map Search
+--map executes a search for each input result.
+
+1. Retrieve a set of records.
+2. Take a field from each record.
+3. Insert that value into another search.
+4. Execute the search separately for each input record.
+--hardcoded map example
 
 index="botsv1" source="stream:http" 
 |  table source,sourcetype,action,http_method,dest_ip 
@@ -68,18 +137,37 @@ index="botsv1" source="stream:http"
 |  table source,sourcetype,action,http_method,dest_ip 
 | map search="|search index="botsv1" sourcetype="suricata" |table vendor,dest_ip,sourcetype| search dest_ip=$dest_ip$"
 
-#selfjoin
+or
+index=botsv1 sourcetype="stream:http"
+| stats count as HTTP_Count by dest_ip
+| head 5
+| map maxsearches=5 search="search index=botsv1 sourcetype=suricata dest_ip=\"$dest_ip$\" | table dest_ip sourcetype transport flow.bytes_toclient flow.bytes_toserver"
+
+or--Dynamic map using $dest_ip$
+index=botsv1 sourcetype="stream:http"
+| stats count as HTTP_Count by dest_ip
+| head 5
+| map maxsearches=5 search="search index=botsv1 sourcetype=suricata dest_ip=\"$dest_ip$\""
+
+#Understanding selfjoin
+selfjoin joins a search result set against itself using a common field.
+For example, you may have multiple events with the same dest_ip. selfjoin can combine matching
 joins data based on next values of a field and gives latest values
-index="botsv1" source="stream:http" 
-|  table source,sourcetype,action,http_method,dest_ip 
-|  selfjoin dest_ip
 
+index=botsv1 source="stream:http"
+| table _time source sourcetype action http_method dest_ip
+| selfjoin dest_ip
+
+#Using keepsingle=1
 #overwrite false and keeping rows which have no matching values using 'keepsingle'
-index="botsv1" source="stream:http" 
-|  table source,sourcetype,action,http_method,dest_ip 
-|  selfjoin overwrite=false keepsingle=1 dest_ip
+index=botsv1 source="stream:http"
+| table _time source sourcetype action http_method dest_ip
+| selfjoin overwrite=false keepsingle=1 dest_ip
 
-
+--using stats
+index=botsv1 source="stream:http"
+| stats latest(_time) as Latest_Event by dest_ip
+| convert ctime(Latest_Event)
 
 
 

@@ -1,14 +1,96 @@
-Subsearch
+Subsearch: A subsearch is a search nested inside another search.
 ------------
 --must be enclosed in square brackets in the primary search
---must have a command after the pipe and before the subsearch
+--A subsearch is placed where the receiving command expects its results.
 --when a search contains subsearch, subsearch is run first
---first command in subsearch miust be generating command, such as search , eventcount, inputlookup and tstats
+--first command in subsearch must be generating command, such as search , eventcount, inputlookup and tstats
 --time ranges specified in outersearch ,do not apply to subsearch and visa versa.
-
+  --Subsearches can have their own time constraints; don't assume they automatically use an independent time range. Specify time ranges explicitly when needed.
 
 --paramterize one search using output of another search
 --run a separate search and add the output to the first search using append command
 --used with commands such as join,append,appendcols,foreach etc..
 
+index=botsv1
+[ search index=botsv1 sourcetype="stream:dns"
+  | stats count by src_ip
+  | fields src_ip
+]
+
+#Find events associated with the top 5 DNS source IPs
+--First, the subsearch identifies the five most frequently occurring source IPs in DNS events.
+The inner search finds DNS events.
+stats counts events by src_ip.
+sort orders IP addresses by event count.
+head 5 keeps the top five.
+fields src_ip returns only the IP addresses.
+The outer search finds all botsv1 events matching those IP addresses.
+The final stats counts those events by IP.
+
+index=botsv1
+[
+    search index=botsv1 sourcetype="stream:dns" src_ip=*
+    | stats count by src_ip
+    | sort - count
+    | head 5
+    | fields src_ip
+]
+| stats count by src_ip
+| sort - count
+
+--Find all events associated with a particular source IP
+--the subsearch identifies source IP addresses that generated more than 100 DNS events.
+--You identify frequently occurring DNS source IPs first, then investigate which sourcetypes contain events associated with those IPs.
+index=botsv1
+[
+    search index=botsv1 sourcetype="stream:dns" src_ip=*
+    | stats count by src_ip
+    | where count > 100
+    | fields src_ip
+]
+| stats count by sourcetype
+| sort - count
+
+--Using append with a subsearch
+--append combines the results of another search with the primary search.
+
+index=botsv1 sourcetype="stream:dns"
+| stats count as Total_Events
+| eval Event_Category="DNS Events"
+| append [
+    search index=botsv1 sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+    | stats count as Total_Events
+    | eval Event_Category="Sysmon Events"
+]
+| table Event_Category Total_Events
+
+--Using join with a subsearch
+--For example, suppose we want to identify DNS source IPs and their DNS event counts.
+Primary search calculates DNS event counts per source IP.
+Subsearch calculates the number of unique destination IPs per source IP.
+join matches the results using src_ip.
+The final table displays both measurements.
+Note**join has limitations and performance costs, especially with large datasets. 
+For many aggregation tasks, stats or eventstats can be more efficient.
+
+index=botsv1 sourcetype="stream:dns"
+| stats count as DNS_Count by src_ip
+| join type=inner src_ip [
+    search index=botsv1 sourcetype="stream:dns"
+    | stats dc(dest_ip) as Unique_Destinations by src_ip
+]
+| table src_ip DNS_Count Unique_Destinations
+
+--Understanding appendcols
+--Unlike append, which adds rows, appendcols adds columns.
+
+Be careful: appendcols aligns results by row position, not by a matching field. 
+It is best suited to cases where the result ordering and row counts are controlled.
+
+index=botsv1 sourcetype="stream:dns"
+| stats count as DNS_Count
+| appendcols [
+    search index=botsv1 sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+    | stats count as Sysmon_Count
+]
 

@@ -1,0 +1,137 @@
+Settings > data inputs > HTTP Event Collector > Global Settings 
+All tokens : enabled
+Default Source type : _json  (http collectors generally support json/clear text formats)
+default index : main 
+default output group : none (http collector can send data to other indexers esp in distributed environment)
+
+enable SSL : unselected
+default port : fine
+
+======================
+New token 
+Name : Test
+>next
+Source type : automatic
+AppContext : search and reporting
+Select allowed indexes : main
+>review
+>submit
+Shows : Token Generated
+[Token will be used for authentication]
+
+Go back to Data Inputs > HTTP Event Collector > shows 1
+[we can edit token if needed]
+
+Look in >c:\program files\splunk\etc\apps\splunk_httpinput\local\inputs.conf --shows our settings
+Look in >c:\program files\splunk\etc\apps\search\local\inputs.conf --shows token values
+
+when HTTP Event collector is setup > end points are created
+Now we can send data using CURL command
+
+Token value created is 128 bit GUI (global unique identifier)
+Other options..
+To generate GUIDs" https://www.guidgenerator.com/
+
+--tokenize auth
+User curl command to send data ---collector 
+look for data in 'index=main'
+
+--basic auth
+we can also use basic auth (with splunk userid and token as password)
+
+--multiple events
+
+--raw text ( we need to call the raw end point)
+
+--indexer ack
+(whenever any event is sent to HTTP event collector >  This will send event forward for next indexer/processing in pipeline
+and if there is any error the data might not get indexex, to avoid data going miss use indexer ack)
+[channel: can have new GUI created]
+
+=======================
+commands:
+--tokenize auth
+curl -k http://localhost:8088/services/collector -H "Authorization:Splunk <token>" 
+-d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+
+For example:
+adminu@n1:~$ curl -k http://n1:8088/services/collector -H "Authorization:Splunk fce9df17-751a-49ab-9466-07264489f888" 
+-d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+
+{"text":"Success","code":0}
+
+--basic auth
+curl -k http://localhost:8088/services/collector -u "admin:<token>" 
+-d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+
+For example:
+adminu@n1:~$ curl -k http://n1:8088/services/collector -u "admin:fce9df17-751a-49ab-9466-07264489f888" 
+-d "{\"sourcetype\": \"trial\",\"event\":\"new hello world\"}"
+
+{"text":"Success","code":0} 
+
+--multiple events
+curl -k http://localhost:8088/services/collector -u "admin<token>" -d 
+"{\"sourcetype\": \"trial\",\"event\":\"hello world3\"}"
+"{\"sourcetype\": \"trial\",\"event\":\"hello world4\"}"
+
+For example:
+adminu@n1:~$ curl -k http://n1:8088/services/collector -u "admin:fce9df17-751a-49ab-9466-07264489f888" 
+-d "{\"sourcetype\": \"trial\",\"event\":\"new hello world3\"}"
+"{\"sourcetype\": \"trial\",\"event\":\"new hello world4\"}"
+
+--raw text
+curl -k "http://localhost:8088/services/collector/raw?sourcetype=trial" -H "Authorization:Splunk <token>" 
+-d "1,2,3... Hello World"
+
+For example:
+adminu@n1:~$ curl -k "http://n1:8088/services/collector/raw?sourcetype=trial" 
+-H "Authorization:Splunk fce9df17-751a-49ab-9466-07264489f888" -d "1,2,3,...Hello World!"
+
+{"text":"Success","code":0}
+
+
+for channel,generate GUId using link above:
+
+--indexer ack (need to specify a channel)
+curl -k "http://localhost:8088/services/collector?channel=4793cbe8-1b30-4caf-b048-6a540f452985" 
+-H "Authorization:Splunk <token>" -d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+
+--check with ack id (provided indexer acknowledgement was enabled )
+curl -k "http://localhost:8088/services/collector/ack?channel=<>" -H "Authorization:Splunk <token>" 
+-d "{\"acks\": [0]}"
+
+
+For example:
+to indexer cluster(indexer acknowledgement enabled)
+adminu@n1:~$ curl -k "http://n1:8088/services/collector?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b" -u "admin:fce9df17-751a-49ab-9466-07264489f888" -d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+{"text":"Success","code":0,"ackId":0}
+
+adminu@n1:~$ 
+adminu@n1:~$ curl -k "http://n1:8088/services/collector/ack?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b" -u "admin:fce9df17-751a-49ab-9466-07264489f888" -d "{\"acks\": [0]}"
+{"acks":{"0":true}}
+
+
+Similarly if local to cloud
+if enabling acknowledgement ,generate guid and use channel to acknowledge..
+Without enabling indexer acknowledgement
+
+adminu@n1:~$ curl -k https://prd-p-bsqgd.splunkcloud.com:8088/services/collector?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b -u "admin:bb0e842e-c95a-4ba6-9a8e-8617cf9b4795" -d "{\"sourcetype\": \"trial\",\"event\":\"new world\"}"
+{"text":"Success","code":0}
+
+adminu@n1:~$ curl -k https://prd-p-bsqgd.splunkcloud.com:8088/services/collector/raw?sourcetype=trial -u "admin:bb0e842e-c95a-4ba6-9a8e-8617cf9b4795" -d "testing raw data"
+{"text":"Success","code":0} 
+
+With enabling indexer acknowledgement
+--sending data in raw format
+adminu@n1:~$ curl -k https://prd-p-bsqgd.splunkcloud.com:8088/services/collector/raw?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b -u "admin:bb0e842e-c95a-4ba6-9a8e-8617cf9b4795" -d "1,2,3... Hello World"
+{"text":"Success","code":0,"ackId":2}
+
+--sending data in json format
+adminu@n1:~$ curl -k https://prd-p-bsqgd.splunkcloud.com:8088/services/collector?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b -u "admin:bb0e842e-c95a-4ba6-9a8e-8617cf9b4795" -d "{\"sourcetype\": \"trial\",\"event\":\"hello world\"}"
+{"text":"Success","code":0,"ackId":3}
+
+#to check
+adminu@n1:~$ curl -k https://prd-p-bsqgd.splunkcloud.com:8088/services/collector/ack?channel=b544a187-42f5-4fac-8c35-d7afcdcb095b -u "admin:bb0e842e-c95a-4ba6-9a8e-8617cf9b4795" -d  "{\"acks\": [3]}"
+{"acks":{"3":true}}
+
