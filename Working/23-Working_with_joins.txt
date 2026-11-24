@@ -52,19 +52,18 @@ index=botsv1 source="stream:http"
     ]
 
 --inner join with selected fields
-index=botsv1 source="stream:http"
+index=botsv1 sourcetype="stream:http"
 | head 10
 | join type=inner dest_ip
     [
         search index=botsv1 sourcetype="suricata"
         | stats
-            sum('flow.bytes_toclient') as bytes_to_client
-            sum('flow.bytes_toserver') as bytes_to_server
+            sum(flow.bytes_toclient) as bytes_to_client
+            sum(flow.bytes_toserver) as bytes_to_server
             values(transport) as transport
-            by dest_ip
+            by dest_ip,sourcetype
     ]
 | table source sourcetype action http_method dest_ip bytes_to_client bytes_to_server transport
-
 
 #outerjoin
 index="botsv1" source="stream:http"
